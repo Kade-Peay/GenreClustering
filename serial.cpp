@@ -32,8 +32,10 @@ std::vector<Point> readcsv()
 {
     std::vector<Point> points;
     std::string line;
-    // std::ifstream file("tracks_features.csv");
-    std::ifstream file("sample_data.csv");
+
+    // pick to use full file or sample file
+    std::ifstream file("tracks_features.csv");
+    //std::ifstream file("sample_data.csv");
 
     // Skip header line
     std::getline(file, line);
@@ -44,26 +46,35 @@ std::vector<Point> readcsv()
         std::string cell;
         std::vector<std::string> row;
 
-        // Split line into cells
-        while (std::getline(lineStream, cell, ','))
-        {
-            row.push_back(cell);
-        }
+        bool inQuotes = false;
+        std::string current;
 
-        // Check if we have enough columns
-        if (row.size() >= 10)
-        {
-            try
-            {
-                // Using danceability (column 9) and energy (column 10) as x,y coordinates
-                double x = std::stod(row[9]);  // danceability
-                double y = std::stod(row[10]); // energy
-                points.push_back(Point(x, y));
+        // handle quoted fields 
+        for (char c : line) {
+            if (c == '"') {
+                inQuotes = !inQuotes;
+            } else if (c == ',' && !inQuotes) {
+                row.push_back(current);
+                current.clear();
+            } else {
+                current += c;
             }
-            catch (const std::exception &e)
-            {
-                std::cerr << "Error parsing line: " << line << "\n";
-                std::cerr << "Error: " << e.what() << "\n";
+        }
+        row.push_back(current); // add last field
+
+        // Check if there is enough columns 
+        if (row.size() >= 11) {
+            try {
+                size_t pos;
+                double x = std::stod(row[9], &pos);
+                if(pos != row[9].length()) continue; // skip if not converted
+                double y = std::stod(row[10], &pos);
+                if (pos != row[10].length()) continue;
+                
+                points.push_back(Point(x, y));
+            } catch (const std::exception& e) {
+                std::cerr << "Skipping line due to parse error: " << line << "\n";
+                continue;
             }
         }
     }
@@ -138,8 +149,8 @@ int main()
         return 1;
     }
 
-    int k = 3;       // number of clusters
-    int epochs = 10; // number of iterations
+    int k = 6;       // number of clusters
+    int epochs = 100; // number of iterations
     kMeansClustering(&points, epochs, k);
 
     // Write results to output file
