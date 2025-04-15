@@ -13,4 +13,4 @@ struct Point
     double distance(Point p);
 };
 
-std::vector<Point> readcsv();
+std::vector<Point> readcsv(std::string filename);

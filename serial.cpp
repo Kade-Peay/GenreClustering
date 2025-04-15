@@ -62,9 +62,15 @@ void kMeansClustering(std::vector<Point> *points, int epochs, int k)
     }
 }
 
-int main()
+int main(int argc, char *argv[])
 {
-    std::vector<Point> points = readcsv();
+    if (argc != 2) {
+        std::cerr << "Usage: " << argv[0] << " <input_file>" << std::endl;
+        return -1;
+    }
+
+    std::string inputFile = argv[1];
+    std::vector<Point> points = readcsv(inputFile);
 
     if (points.empty())
     {

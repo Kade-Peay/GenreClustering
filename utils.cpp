@@ -13,11 +13,11 @@ double Point::distance(Point p)
     return (p.x - x) * (p.x - x) + (p.y - y) * (p.y - y);
 }
 
-std::vector<Point> readcsv()
+std::vector<Point> readcsv(std::string filename)
 {
     std::vector<Point> points;
     std::string line;
-    std::ifstream file("tracks_features.csv");
+    std::ifstream file(filename);
 
     std::getline(file, line); // Skip header
 

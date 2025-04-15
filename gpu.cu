@@ -29,9 +29,18 @@ __global__ void ResetDistance(Point* points){
     points[idx].minDist = DBL_MAX;
 }
 
-int main()
+int main(int argc, char* argv[])
 {
-    std::vector<Point> points = readcsv();
+    if (argc != 4) {
+        std::cerr << "Usage: " << argv[0] << " <input_file> <number_of_clusters> <threads_per_block>" << std::endl;
+        return -1;
+    }
+
+    std::string inputFile = argv[1];
+    int k = std::stoi(argv[2]);
+    int threadsPerBlock = std::stoi(argv[3]);
+
+    std::vector<Point> points = readcsv(inputFile);
 
     if (points.empty())
     {
@@ -39,7 +48,6 @@ int main()
         return 1;
     }
 
-    int k = 6;       // number of clusters
     int epochs = 100; // number of iterations
 
     std::vector<Point> centroids;
@@ -61,8 +69,6 @@ int main()
     cudaMemcpy(d_points, points.data(), points.size() * sizeof(Point), cudaMemcpyHostToDevice);
     cudaMemcpy(d_centroids, centroids.data(), k * sizeof(Point), cudaMemcpyHostToDevice);
 
-    // Launch kernel (1 block, k threads or more depending on your needs)
-    int threadsPerBlock = 256;
     int blocks = (k + threadsPerBlock - 1) / threadsPerBlock;
 
     for (int epoch = 0; epoch < epochs; ++epoch)
