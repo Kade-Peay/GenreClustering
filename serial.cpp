@@ -1,85 +1,8 @@
+#include "utils.hpp"
+#include <cfloat>
 #include <ctime>
 #include <fstream>
 #include <iostream>
-#include <sstream>
-#include <vector>
-#include <cfloat>
-#include <string>
-
-struct Point
-{
-    double x, y; // coordinates (using danceability and energy)
-    int cluster;
-    double minDist;
-
-    Point() : x(0.0),
-              y(0.0),
-              cluster(-1),
-              minDist(DBL_MAX) {}
-
-    Point(double x, double y) : x(x),
-                                y(y),
-                                cluster(-1),
-                                minDist(DBL_MAX) {}
-
-    double distance(Point p)
-    {
-        return (p.x - x) * (p.x - x) + (p.y - y) * (p.y - y);
-    }
-};
-
-std::vector<Point> readcsv()
-{
-    std::vector<Point> points;
-    std::string line;
-
-    // pick to use full file or sample file
-    std::ifstream file("tracks_features.csv");
-    //std::ifstream file("sample_data.csv");
-
-    // Skip header line
-    std::getline(file, line);
-
-    while (std::getline(file, line))
-    {
-        std::stringstream lineStream(line);
-        std::string cell;
-        std::vector<std::string> row;
-
-        bool inQuotes = false;
-        std::string current;
-
-        // handle quoted fields 
-        for (char c : line) {
-            if (c == '"') {
-                inQuotes = !inQuotes;
-            } else if (c == ',' && !inQuotes) {
-                row.push_back(current);
-                current.clear();
-            } else {
-                current += c;
-            }
-        }
-        row.push_back(current); // add last field
-
-        // Check if there is enough columns 
-        if (row.size() >= 11) {
-            try {
-                size_t pos;
-                double x = std::stod(row[9], &pos);
-                if(pos != row[9].length()) continue; // skip if not converted
-                double y = std::stod(row[10], &pos);
-                if (pos != row[10].length()) continue;
-                
-                points.push_back(Point(x, y));
-            } catch (const std::exception& e) {
-                std::cerr << "Skipping line due to parse error: " << line << "\n";
-                continue;
-            }
-        }
-    }
-    return points;
-}
 
 void kMeansClustering(std::vector<Point> *points, int epochs, int k)
 {

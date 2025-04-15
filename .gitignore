@@ -1,4 +1,6 @@
 tracks_features.csv
 ./serial
 .vscode
-
+*.o
+serial
+gpu
