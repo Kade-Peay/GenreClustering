@@ -1,15 +1,17 @@
 #pragma once
 #include <vector>
 #include <string>
+#include <cfloat>
 
-struct Point
-{
-    double x, y;
+struct Point {
+    double danceability;
+    double valence;
+    double energy;
     int cluster;
     double minDist;
 
     Point();
-    Point(double x, double y);
+    Point(double d, double v, double e);
     double distance(Point p);
 };
 

@@ -2,60 +2,80 @@
 #include <fstream>
 #include <sstream>
 #include <iostream>
-#include <cfloat>
+#include <stdexcept>
 
-Point::Point() : x(0.0), y(0.0), cluster(-1), minDist(DBL_MAX) {}
+// Point constructor implementations
+Point::Point() : 
+    danceability(0.0), 
+    valence(0.0), 
+    energy(0.0), 
+    cluster(-1), 
+    minDist(DBL_MAX) {}
 
-Point::Point(double x, double y) : x(x), y(y), cluster(-1), minDist(DBL_MAX) {}
+Point::Point(double d, double v, double e) : 
+    danceability(d), 
+    valence(v), 
+    energy(e), 
+    cluster(-1), 
+    minDist(DBL_MAX) {}
 
-double Point::distance(Point p)
-{
-    return (p.x - x) * (p.x - x) + (p.y - y) * (p.y - y);
+// Distance calculation implementation
+double Point::distance(Point p) {
+    return (p.danceability - danceability) * (p.danceability - danceability) +
+           (p.valence - valence) * (p.valence - valence) + 
+           (p.energy - energy) * (p.energy - energy);
 }
 
-std::vector<Point> readcsv()
-{
+// CSV reading implementation
+std::vector<Point> readcsv() {
     std::vector<Point> points;
     std::string line;
     std::ifstream file("tracks_features.csv");
 
-    std::getline(file, line); // Skip header
+    if (!file.is_open()) {
+        throw std::runtime_error("Could not open tracks_features.csv");
+    }
 
-    while (std::getline(file, line))
-    {
+    // Skip header line
+    std::getline(file, line);
+
+    while (std::getline(file, line)) {
+        std::stringstream lineStream(line);
+        std::string cell;
         std::vector<std::string> row;
         bool inQuotes = false;
         std::string current;
 
-        for (char c : line)
-        {
-            if (c == '"') inQuotes = !inQuotes;
-            else if (c == ',' && !inQuotes)
-            {
+        // Handle quoted fields with commas
+        for (char c : line) {
+            if (c == '"') {
+                inQuotes = !inQuotes;
+            } else if (c == ',' && !inQuotes) {
                 row.push_back(current);
                 current.clear();
+            } else {
+                current += c;
             }
-            else current += c;
         }
         row.push_back(current);
 
-        if (row.size() >= 11)
-        {
-            try
-            {
-                size_t pos;
-                double x = std::stod(row[9], &pos);
-                if (pos != row[9].length()) continue;
-                double y = std::stod(row[10], &pos);
-                if (pos != row[10].length()) continue;
-
-                points.push_back(Point(x, y));
-            }
-            catch (const std::exception& e)
-            {
-                std::cerr << "Skipping line due to parse error: " << line << "\n";
+        // Check if we have enough columns
+        if (row.size() >= 19) {
+            try {
+                double danceability = std::stod(row[9]);   // Column 9
+                double valence = std::stod(row[18]);       // Column 18
+                double energy = std::stod(row[10]);       // Column 10
+                points.push_back(Point(danceability, valence, energy));
+            } catch (const std::exception& e) {
+                std::cerr << "Warning: Skipping malformed line - " << e.what() << "\n";
+                continue;
             }
         }
     }
+    
+    if (points.empty()) {
+        throw std::runtime_error("No valid data points loaded from CSV");
+    }
+
     return points;
 }
