@@ -76,7 +76,7 @@ int main(int argc, char* argv[])
     for (int epoch = 0; epoch < epochs; ++epoch)
     {
         // Assign points to clusters
-        for (int i = 0; i < centroids.size(); ++i)
+        for (size_t i = 0; i < centroids.size(); ++i)
         {
             AssignToCluster<<<blocks, threadsPerBlock>>>(d_points, d_centroids, i);
         }

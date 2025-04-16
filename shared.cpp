@@ -42,8 +42,11 @@ void kMeansClustering(std::vector<Point> *points, int epochs, int k)
     }
 
     // Reduction variables for accumulation
-    std::vector<int> nPoints(k, 0);
-    std::vector<double> sumD(k, 0.0), sumV(k,0.0), sumE(k,0.0);
+    // switch to arrays because of openMP
+    int nPoints[k] = {0};
+    double sumD[k] = {0.0};
+    double sumV[k] = {0.0};
+    double sumE[k] = {0.0};
 
     // Parallel accumulation of points
     #pragma omp parallel for reduction(+:nPoints, sumD, sumV, sumE)
@@ -84,17 +87,13 @@ int main(int argc, char *argv[])
     int k = std::stoi(argv[2]);
     int threads = atoi(argv[3]);
     std::vector<Point> points = readcsv(inputFile);
+    int epochs = 100; // number of iterations
 
     if (points.empty())
     {
         std::cerr << "No data points loaded. Check your input file.\n";
         return 1;
     }
-
-    int k = 6;       // number of clusters
-    int epochs = 100; // number of iterations
-
-
     
     // set number of threads
     omp_set_num_threads(threads);

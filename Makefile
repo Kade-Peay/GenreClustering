@@ -8,6 +8,7 @@ NVCCFLAGS = -Xcompiler "-Wall -Wextra" -std=c++17 -arch=sm_52
 
 # Source files
 CPPSRCS = serial.cpp utils.cpp
+SHARED_SRCS = shared.cpp utils.cpp
 CU_SRCS = gpu.cu utils.cpp
 
 # Object files
@@ -20,7 +21,7 @@ SHARED_TARGET = shared
 GPU_TARGET = gpu
 
 # Default rule
-all: $(SERIAL_TARGET) $(GPU_TARGET)
+all: $(SERIAL_TARGET) $(GPU_TARGET) $(SHARED_TARGET)
 
 # Serial executable
 $(SERIAL_TARGET): serial.o utils.o
@@ -44,4 +45,4 @@ $(GPU_TARGET): gpu.o utils.o
 
 # Clean rule
 clean:
-	rm -f *.o $(SERIAL_TARGET) $(GPU_TARGET)
+	rm -f *.o $(SERIAL_TARGET) $(GPU_TARGET) $(SHARED_TARGET)
