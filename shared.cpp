@@ -12,7 +12,7 @@
 void kMeansClustering(std::vector<Point> *points, int epochs, int k)
 {
     std::vector<Point> centroids;
-    srand(time(0));
+    srand(100);
 
     // Initialize centroids with random points
     for (int i = 0; i < k; ++i)
@@ -74,12 +74,16 @@ void kMeansClustering(std::vector<Point> *points, int epochs, int k)
 int main(int argc, char *argv[])
 {
     // first check for proper command line args
-    if (argc != 2) {
-        std::cout << "Command line usage: ./shared <thread_count>" << std::endl;
+    if (argc != 4) {
+        std::cerr << "Usage: " << argv[0] << " <input_file> <number_of_clusters> <thread_count>" << std::endl;
         return 1;
     }
-
-    std::vector<Point> points = readcsv();
+    
+    // get thread num from args
+    std::string inputFile = argv[1];
+    int k = std::stoi(argv[2]);
+    int threads = atoi(argv[3]);
+    std::vector<Point> points = readcsv(inputFile);
 
     if (points.empty())
     {
@@ -90,8 +94,7 @@ int main(int argc, char *argv[])
     int k = 6;       // number of clusters
     int epochs = 100; // number of iterations
 
-    // get thread num from args
-    int threads = atoi(argv[1]);
+
     
     // set number of threads
     omp_set_num_threads(threads);
