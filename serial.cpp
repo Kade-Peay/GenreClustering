@@ -4,6 +4,10 @@
 #include <fstream>
 #include <iostream>
 
+/*
+    Author: Kade Peay
+*/
+
 void kMeansClustering(std::vector<Point> *points, int epochs, int k)
 {
     std::vector<Point> centroids;

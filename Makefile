@@ -3,7 +3,7 @@ CXX = g++
 NVCC = nvcc
 
 # Compiler flags
-CXXFLAGS = -Wall -Wextra -std=c++17
+CXXFLAGS = -Wall -Wextra -std=c++17 -fopenmp
 NVCCFLAGS = -Xcompiler "-Wall -Wextra" -std=c++17 -arch=sm_52
 
 # Source files
@@ -16,6 +16,7 @@ CUOBJS = $(CU_SRCS:.cu=.o)
 
 # Output binary
 SERIAL_TARGET = serial
+SHARED_TARGET = shared
 GPU_TARGET = gpu
 
 # Default rule
@@ -23,6 +24,10 @@ all: $(SERIAL_TARGET) $(GPU_TARGET)
 
 # Serial executable
 $(SERIAL_TARGET): serial.o utils.o
+	$(CXX) $(CXXFLAGS) -o $@ $^
+
+# Shared executable
+$(SHARED_TARGET): shared.o utils.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
 # GPU executable
