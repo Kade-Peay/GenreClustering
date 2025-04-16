@@ -1,20 +1,22 @@
 #include "utils.hpp"
+#include <cuda_runtime.h>
+#include <cfloat>
 #include <ctime>
 #include <fstream>
 #include <iostream>
 #include <sstream>
-#include <vector>
-#include <cfloat>
 #include <string>
-#include <cuda_runtime.h>
+#include <vector>
 
 __global__ void AssignToCluster(Point* points, Point* centroids, int clusterId) {
     int idx = threadIdx.x;
 
     Point p = points[idx];
 
-    double dist = (p.x - centroids[clusterId].x) * (p.x - centroids[clusterId].x) +
-                  (p.y - centroids[clusterId].y) * (p.y - centroids[clusterId].y);
+    double dist = 
+        (p.danceability - centroids[clusterId].danceability) * (p.danceability - centroids[clusterId].danceability) +
+        (p.valence - centroids[clusterId].valence) * (p.valence - centroids[clusterId].valence) + 
+        (p.energy - centroids[clusterId].energy) * (p.energy - centroids[clusterId].energy);
 
     if (dist < p.minDist)
     {
@@ -51,7 +53,7 @@ int main(int argc, char* argv[])
     int epochs = 100; // number of iterations
 
     std::vector<Point> centroids;
-    srand(time(0));
+    srand(100);
 
     // Initialize centroids with random points
     for (int i = 0; i < k; ++i)
@@ -81,17 +83,16 @@ int main(int argc, char* argv[])
         cudaDeviceSynchronize();
 
         std::vector<int> nPoints(k, 0);
-        std::vector<double> sumX(k, 0.0);
-        std::vector<double> sumY(k, 0.0);
+        std::vector<double> sumD(k, 0.0), sumV(k, 0.0), sumE(k, 0.0);
 
         // Accumulate points for new centroids
         cudaMemcpy(points.data(), d_points, points.size() * sizeof(Point), cudaMemcpyDeviceToHost);
-        for (auto it = points.begin(); it != points.end(); ++it)
-        {
-            int clusterId = it->cluster;
+        for (auto& p : points) {
+            int clusterId = p.cluster;
             nPoints[clusterId] += 1;
-            sumX[clusterId] += it->x;
-            sumY[clusterId] += it->y;
+            sumD[clusterId] += p.danceability;
+            sumV[clusterId] += p.valence;
+            sumE[clusterId] += p.energy;
         }
 
         // reset distance
@@ -105,8 +106,9 @@ int main(int argc, char* argv[])
             int clusterId = c - begin(centroids);
             if (nPoints[clusterId] != 0)
             {
-                c->x = sumX[clusterId] / nPoints[clusterId];
-                c->y = sumY[clusterId] / nPoints[clusterId];
+                c->danceability = sumD[clusterId] / nPoints[clusterId];
+                c->valence = sumV[clusterId] / nPoints[clusterId];
+                c->energy = sumE[clusterId] / nPoints[clusterId];
             }
         }
         cudaMemcpy(d_centroids, centroids.data(), k * sizeof(Point), cudaMemcpyHostToDevice);
@@ -118,11 +120,11 @@ int main(int argc, char* argv[])
 
     // Write results to output file
     std::ofstream myfile("output.csv");
-    myfile << "danceability,energy,cluster\n";
+    myfile << "danceability,valence,energy,cluster\n";
 
     for (const auto &point : points)
     {
-        myfile << point.x << "," << point.y << "," << point.cluster << "\n";
+        myfile << point.danceability << "," << point.valence << "," << point.energy << "," << point.cluster << "\n";
     }
     myfile.close();
 

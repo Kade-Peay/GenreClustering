@@ -2,5 +2,6 @@ tracks_features.csv
 ./serial
 .vscode
 *.o
+:Zone.Identifier
 serial
 gpu
