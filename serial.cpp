@@ -36,17 +36,16 @@ void kMeansClustering(std::vector<Point> *points, int epochs, int k)
         }
 
         std::vector<int> nPoints(k, 0);
-        std::vector<double> sumX(k, 0.0);
-        std::vector<double> sumY(k, 0.0);
+        std::vector<double> sumD(k, 0.0), sumV(k, 0.0), sumE(k, 0.0);
 
         // Accumulate points for new centroids
-        for (auto it = points->begin(); it != points->end(); ++it)
-        {
-            int clusterId = it->cluster;
+        for (auto& p : *points) {
+            int clusterId = p.cluster;
             nPoints[clusterId] += 1;
-            sumX[clusterId] += it->x;
-            sumY[clusterId] += it->y;
-            it->minDist = DBL_MAX; // reset distance
+            sumD[clusterId] += p.danceability;
+            sumV[clusterId] += p.valence;
+            sumE[clusterId] += p.energy;
+            p.minDist = DBL_MAX; // reset distance
         }
 
         // Compute new centroids
@@ -55,8 +54,9 @@ void kMeansClustering(std::vector<Point> *points, int epochs, int k)
             int clusterId = c - begin(centroids);
             if (nPoints[clusterId] != 0)
             {
-                c->x = sumX[clusterId] / nPoints[clusterId];
-                c->y = sumY[clusterId] / nPoints[clusterId];
+                c->danceability = sumD[clusterId] / nPoints[clusterId];
+                c->valence = sumV[clusterId] / nPoints[clusterId];
+                c->energy = sumE[clusterId] / nPoints[clusterId];
             }
         }
     }
@@ -84,11 +84,11 @@ int main(int argc, char *argv[])
 
     // Write results to output file
     std::ofstream myfile("output.csv");
-    myfile << "danceability,energy,cluster\n";
+    myfile << "danceability,valence,energy,cluster\n";
 
     for (const auto &point : points)
     {
-        myfile << point.x << "," << point.y << "," << point.cluster << "\n";
+        myfile << point.danceability << "," << point.valence << "," << point.energy << "," << point.cluster << "\n";
     }
     myfile.close();
 

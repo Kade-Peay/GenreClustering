@@ -1,34 +1,50 @@
 import matplotlib.pyplot as plt
-import pandas as pd 
-import seaborn as sns
+import pandas as pd
+from mpl_toolkits.mplot3d import Axes3D
 
-# Set style for better visuals
-sns.set(style="whitegrid")
-plt.figure(figsize=(12, 6))
 
-# Before clustering 
-plt.subplot(1, 2, 1)  # 1 row, 2 columns, first plot
-df = pd.read_csv("tracks_features.csv")
-df.columns = ["id","name","album","album_id","artists","artist_ids","track_number",
-              "disc_number","explicit","danceability","energy","key","loudness",
-              "mode","speechiness","acousticness","instrumentalness","liveness",
-              "valence","tempo","duration_ms","time_signature","year","release_date"]
-sns.scatterplot(x=df["danceability"], y=df["energy"], hue=df["key"], 
-                palette="viridis", alpha=0.6)
-plt.title("Original: Danceability vs Energy (Colored by Key)")
-plt.xlabel("Danceability")
-plt.ylabel("Energy")
+# Read data with error handling
+try:
+    clustered = pd.read_csv("output.csv", quotechar='"')
+except Exception as e:
+    print(f"Error reading CSV: {e}")
+    exit()
 
-# After clustering 
-plt.subplot(1, 2, 2)  # 1 row, 2 columns, second plot
-clustered_df = pd.read_csv("output.csv")
-sns.scatterplot(x="danceability", y="energy", hue="cluster", 
-                data=clustered_df, palette="hls", alpha=0.6)
-plt.title("Clustered: Danceability vs Energy")
-plt.xlabel("Danceability")
-plt.ylabel("Energy")
+# Create figure
+fig = plt.figure(figsize=(12, 8))
+ax = fig.add_subplot(111, projection='3d')
 
-# Adjust layout and save
+# set color map 
+cmap = plt.get_cmap('tab10')
+
+# Create scatter plot
+scatter = ax.scatter3D(
+    clustered["danceability"],
+    clustered["valence"],
+    clustered["energy"],
+    c=clustered["cluster"],
+    cmap=cmap,
+    alpha=0.7,
+    s=1,
+    depthshade=True
+)
+
+# Labels and title
+ax.set_xlabel("Danceability", fontsize=12, labelpad=10)
+ax.set_ylabel("Valence", fontsize=12, labelpad=10)
+ax.set_zlabel("Energy", fontsize=12, labelpad=10)
+plt.title("3D Music Cluster Visualization", fontsize=16, pad=20)
+
+# Colorbar
+cbar = plt.colorbar(scatter, pad=0.15)
+cbar.set_label('Cluster ID', rotation=270, fontsize=12, labelpad=20)
+
+# Adjust view
+ax.view_init(elev=25, azim=45)
+
+# Save and show
 plt.tight_layout()
-plt.savefig("scatterplot.png", dpi=300, bbox_inches='tight')
-plt.show()
+plt.savefig("3d_clusters.png", dpi=300, bbox_inches='tight')
+
+# set this off by default as it gave problems. Just open the file after
+# plt.show()
