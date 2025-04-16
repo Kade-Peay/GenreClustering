@@ -24,8 +24,8 @@ scatter = ax.scatter3D(
     clustered["energy"],
     c=clustered["cluster"],
     cmap=cmap,
-    alpha=0.7,
-    s=1,
+    alpha=0.5,
+    s=0.5,
     depthshade=True
 )
 
@@ -48,3 +48,5 @@ plt.savefig("3d_clusters.png", dpi=300, bbox_inches='tight')
 
 # set this off by default as it gave problems. Just open the file after
 # plt.show()
+
+print("Done creating scatterplot")
