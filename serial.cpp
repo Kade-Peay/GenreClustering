@@ -11,7 +11,7 @@
 void kMeansClustering(std::vector<Point> *points, int epochs, int k)
 {
     std::vector<Point> centroids;
-    srand(time(0));
+    srand(100);
 
     // Initialize centroids with random points
     for (int i = 0; i < k; ++i)
@@ -66,9 +66,16 @@ void kMeansClustering(std::vector<Point> *points, int epochs, int k)
     }
 }
 
-int main()
+int main(int argc, char *argv[])
 {
-    std::vector<Point> points = readcsv();
+    if (argc != 3) {
+        std::cerr << "Usage: " << argv[0] << " <input_file> <number_of_clusters>" << std::endl;
+        return -1;
+    }
+
+    std::string inputFile = argv[1];
+    int k = std::stoi(argv[2]);
+    std::vector<Point> points = readcsv(inputFile);
 
     if (points.empty())
     {
@@ -76,7 +83,6 @@ int main()
         return 1;
     }
 
-    int k = 6;       // number of clusters
     int epochs = 100; // number of iterations
     kMeansClustering(&points, epochs, k);
 

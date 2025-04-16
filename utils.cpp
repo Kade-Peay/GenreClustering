@@ -26,11 +26,11 @@ double Point::distance(Point p) {
            (p.energy - energy) * (p.energy - energy);
 }
 
-// CSV reading implementation
-std::vector<Point> readcsv() {
+std::vector<Point> readcsv(std::string filename)
+{
     std::vector<Point> points;
     std::string line;
-    std::ifstream file("tracks_features.csv");
+    std::ifstream file(filename);
 
     if (!file.is_open()) {
         throw std::runtime_error("Could not open tracks_features.csv");

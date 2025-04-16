@@ -1,20 +1,22 @@
 #include "utils.hpp"
+#include <cuda_runtime.h>
+#include <cfloat>
 #include <ctime>
 #include <fstream>
 #include <iostream>
 #include <sstream>
-#include <vector>
-#include <cfloat>
 #include <string>
-#include <cuda_runtime.h>
+#include <vector>
 
 __global__ void AssignToCluster(Point* points, Point* centroids, int clusterId) {
     int idx = threadIdx.x;
 
     Point p = points[idx];
 
-    double dist = (p.x - centroids[clusterId].x) * (p.x - centroids[clusterId].x) +
-                  (p.y - centroids[clusterId].y) * (p.y - centroids[clusterId].y);
+    double dist = 
+        (p.danceability - centroids[clusterId].danceability) * (p.danceability - centroids[clusterId].danceability) +
+        (p.valence - centroids[clusterId].valence) * (p.valence - centroids[clusterId].valence) + 
+        (p.energy - centroids[clusterId].energy) * (p.energy - centroids[clusterId].energy);
 
     if (dist < p.minDist)
     {
@@ -29,9 +31,18 @@ __global__ void ResetDistance(Point* points){
     points[idx].minDist = DBL_MAX;
 }
 
-int main()
+int main(int argc, char* argv[])
 {
-    std::vector<Point> points = readcsv();
+    if (argc != 4) {
+        std::cerr << "Usage: " << argv[0] << " <input_file> <number_of_clusters> <threads_per_block>" << std::endl;
+        return -1;
+    }
+
+    std::string inputFile = argv[1];
+    int k = std::stoi(argv[2]);
+    int threadsPerBlock = std::stoi(argv[3]);
+
+    std::vector<Point> points = readcsv(inputFile);
 
     if (points.empty())
     {
@@ -39,11 +50,10 @@ int main()
         return 1;
     }
 
-    int k = 6;       // number of clusters
     int epochs = 100; // number of iterations
 
     std::vector<Point> centroids;
-    srand(time(0));
+    srand(100);
 
     // Initialize centroids with random points
     for (int i = 0; i < k; ++i)
@@ -61,8 +71,6 @@ int main()
     cudaMemcpy(d_points, points.data(), points.size() * sizeof(Point), cudaMemcpyHostToDevice);
     cudaMemcpy(d_centroids, centroids.data(), k * sizeof(Point), cudaMemcpyHostToDevice);
 
-    // Launch kernel (1 block, k threads or more depending on your needs)
-    int threadsPerBlock = 256;
     int blocks = (k + threadsPerBlock - 1) / threadsPerBlock;
 
     for (int epoch = 0; epoch < epochs; ++epoch)
@@ -75,17 +83,16 @@ int main()
         cudaDeviceSynchronize();
 
         std::vector<int> nPoints(k, 0);
-        std::vector<double> sumX(k, 0.0);
-        std::vector<double> sumY(k, 0.0);
+        std::vector<double> sumD(k, 0.0), sumV(k, 0.0), sumE(k, 0.0);
 
         // Accumulate points for new centroids
         cudaMemcpy(points.data(), d_points, points.size() * sizeof(Point), cudaMemcpyDeviceToHost);
-        for (auto it = points.begin(); it != points.end(); ++it)
-        {
-            int clusterId = it->cluster;
+        for (auto& p : points) {
+            int clusterId = p.cluster;
             nPoints[clusterId] += 1;
-            sumX[clusterId] += it->x;
-            sumY[clusterId] += it->y;
+            sumD[clusterId] += p.danceability;
+            sumV[clusterId] += p.valence;
+            sumE[clusterId] += p.energy;
         }
 
         // reset distance
@@ -99,8 +106,9 @@ int main()
             int clusterId = c - begin(centroids);
             if (nPoints[clusterId] != 0)
             {
-                c->x = sumX[clusterId] / nPoints[clusterId];
-                c->y = sumY[clusterId] / nPoints[clusterId];
+                c->danceability = sumD[clusterId] / nPoints[clusterId];
+                c->valence = sumV[clusterId] / nPoints[clusterId];
+                c->energy = sumE[clusterId] / nPoints[clusterId];
             }
         }
         cudaMemcpy(d_centroids, centroids.data(), k * sizeof(Point), cudaMemcpyHostToDevice);
@@ -112,11 +120,11 @@ int main()
 
     // Write results to output file
     std::ofstream myfile("output.csv");
-    myfile << "danceability,energy,cluster\n";
+    myfile << "danceability,valence,energy,cluster\n";
 
     for (const auto &point : points)
     {
-        myfile << point.x << "," << point.y << "," << point.cluster << "\n";
+        myfile << point.danceability << "," << point.valence << "," << point.energy << "," << point.cluster << "\n";
     }
     myfile.close();
 
