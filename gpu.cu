@@ -119,7 +119,7 @@ int main(int argc, char* argv[])
     cudaFree(d_centroids);
 
     // Write results to output file
-    std::ofstream myfile("output.csv");
+    std::ofstream myfile("gpu_output.csv");
     myfile << "danceability,valence,energy,cluster\n";
 
     for (const auto &point : points)
@@ -128,6 +128,6 @@ int main(int argc, char* argv[])
     }
     myfile.close();
 
-    std::cout << "Clustering complete. Results saved to output.csv\n";
+    std::cout << "Clustering complete. Results saved to gpu_output.csv\n";
     return 0;
 }

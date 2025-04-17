@@ -101,7 +101,7 @@ int main(int argc, char *argv[])
     kMeansClustering(&points, epochs, k);
 
     // Write results to output file
-    std::ofstream myfile("output.csv");
+    std::ofstream myfile("shared_output.csv");
     myfile << "danceability,valence,energy,cluster\n";
 
     for (const auto &point : points)
@@ -110,6 +110,6 @@ int main(int argc, char *argv[])
     }
     myfile.close();
 
-    std::cout << "Clustering complete. Results saved to output.csv\n";
+    std::cout << "Clustering complete. Results saved to shared_output.csv\n";
     return 0;
 }

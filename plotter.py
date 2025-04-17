@@ -1,11 +1,18 @@
 import matplotlib.pyplot as plt
 import pandas as pd
 from mpl_toolkits.mplot3d import Axes3D
+import sys
 
+# Get filename from arg
+try: 
+    filename = sys.argv[1]
+except Exception as e:
+    print(f"Error with arguments. Usage: python3 plotter.py <filename>")
+    exit()
 
 # Read data with error handling
 try:
-    clustered = pd.read_csv("output.csv", quotechar='"')
+    clustered = pd.read_csv(filename, quotechar='"')
 except Exception as e:
     print(f"Error reading CSV: {e}")
     exit()
@@ -43,10 +50,11 @@ cbar.set_label('Cluster ID', rotation=270, fontsize=12, labelpad=20)
 ax.view_init(elev=25, azim=45)
 
 # Save and show
+outputFilename = "3d_clusters.png"
 plt.tight_layout()
-plt.savefig("3d_clusters.png", dpi=300, bbox_inches='tight')
+plt.savefig(outputFilename, dpi=300, bbox_inches='tight')
 
 # set this off by default as it gave problems. Just open the file after
 # plt.show()
 
-print("Done creating scatterplot")
+print(f"Done creating scatterplot. Saved to {outputFilename}")
