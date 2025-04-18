@@ -6,7 +6,7 @@ MPICXX = mpicxx
 # Compiler flags
 CXXFLAGS = -Wall -Wextra -std=c++17 -fopenmp
 NVCCFLAGS = -Xcompiler "-Wall -Wextra" -std=c++17 -arch=sm_52
-MPICXXFLAGS = -Wall -Wextra -std=c++17
+MPICXXFLAGS = -Wall -Wextra -std=c++17 -fopenmp
 
 # Source files
 CPPSRCS = serial.cpp utils.cpp
