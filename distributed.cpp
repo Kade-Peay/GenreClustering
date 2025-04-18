@@ -117,7 +117,7 @@ int main(int argc, char *argv[])
     // first check for proper command line args
     if (argc != 4) {
         if (world_rank == 0)
-            std::cerr << "Usage: " << argv[0] << " <input_file> <k> <thread_count>\n";
+            std::cerr << "Usage: " << argv[0] << " <input_file> <number_of_clusters> <thread_count>\n";
         MPI_Finalize();
         return 1;
     }
