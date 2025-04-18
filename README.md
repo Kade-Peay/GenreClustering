@@ -23,8 +23,8 @@ Refer to the 3d_clusters.png
 
 ## 7. Clearly explain who was responsible for which task on the project 
 Kade: Serial and Parallel shared memory implementations, as well as the python script for visualization. 
-Rett: GPU implementation, as well as the util files and Makefile.
-
+Rett: GPU implementations, as well as the util files and Makefile.
+Rebecca: Distributed implementation.
 
 ## References
 [Serial Implementation Tutorial](https://reasonabledeviations.com/2019/10/02/k-means-in-cpp/)
