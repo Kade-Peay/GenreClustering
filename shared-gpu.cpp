@@ -8,10 +8,8 @@
 extern "C" void Malloc(Point** points, int size);
 extern "C" void MemcpyHost(Point* devicePoints, Point* hostPoints, int size);
 extern "C" void MemcpyDevice(Point* devicePoints, Point* hostPoints, int size);
-extern "C" void Synchronize();
 extern "C" void Free(Point* points);
-extern "C" void AssignToCluster(int blocks, int threadsPerBlock, Point* points, Point* centroids, int centroidId);
-extern "C" void ResetDistance(int blocks, int threadsPerBlock, Point* points);
+extern "C" void AssignToCluster(int blocks, int threadsPerBlock, Point* points, Point* centroids, int k);
 
 int main(int argc, char *argv[])
 {
@@ -58,11 +56,7 @@ int main(int argc, char *argv[])
     for (int epoch = 0; epoch < epochs; ++epoch)
     {
         // Assign points to clusters
-        for (size_t i = 0; i < centroids.size(); ++i)
-        {
-            AssignToCluster(blocks, threadsPerBlock, d_points, d_centroids, i);
-        }
-        Synchronize();
+        AssignToCluster(blocks, threadsPerBlock, d_points, d_centroids, k);
 
         std::vector<int> nPoints(k, 0);
         std::vector<double> sumD(k, 0.0), sumV(k, 0.0), sumE(k, 0.0);
@@ -77,20 +71,13 @@ int main(int argc, char *argv[])
             sumE[clusterId] += p.energy;
         }
 
-        // reset distance
-        ResetDistance(blocks, threadsPerBlock, d_points);
-        Synchronize();
-
         // Compute new centroids
         MemcpyDevice(d_centroids, centroids.data(), k);
-        for (auto c = begin(centroids); c != end(centroids); ++c)
-        {
-            int clusterId = c - begin(centroids);
-            if (nPoints[clusterId] != 0)
-            {
-                c->danceability = sumD[clusterId] / nPoints[clusterId];
-                c->valence = sumV[clusterId] / nPoints[clusterId];
-                c->energy = sumE[clusterId] / nPoints[clusterId];
+        for (int clusterId = 0; clusterId < k; ++clusterId) {
+            if (nPoints[clusterId] != 0) {
+                centroids[clusterId].danceability = sumD[clusterId] / nPoints[clusterId];
+                centroids[clusterId].valence = sumV[clusterId] / nPoints[clusterId];
+                centroids[clusterId].energy = sumE[clusterId] / nPoints[clusterId];
             }
         }
         MemcpyHost(d_centroids, centroids.data(), k);
