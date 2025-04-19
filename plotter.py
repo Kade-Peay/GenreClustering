@@ -3,10 +3,6 @@ import pandas as pd
 from mpl_toolkits.mplot3d import Axes3D
 import sys
 
-#
-# Author: Kade Peay
-#
-
 # Get filename from arg
 try: 
     filename = sys.argv[1]
@@ -22,7 +18,7 @@ except Exception as e:
     exit()
 
 # Create figure
-fig = plt.figure(figsize=(12, 8))
+fig = plt.figure(figsize=(14, 8))
 ax = fig.add_subplot(111, projection='3d')
 
 # set color map 
@@ -43,7 +39,13 @@ scatter = ax.scatter3D(
 # Labels and title
 ax.set_xlabel("Danceability", fontsize=12, labelpad=10)
 ax.set_ylabel("Valence", fontsize=12, labelpad=10)
+
+# Modified z-label placement
 ax.set_zlabel("Energy", fontsize=12, labelpad=10)
+ax.zaxis.set_rotate_label(False)  # Disable automatic rotation
+ax.zaxis.label.set_rotation(90)   # Rotate label to be vertical
+ax.zaxis._axinfo['juggled'] = (1,1,1)  # Moves z-label to right side
+
 plt.title("3D Music Cluster Visualization", fontsize=16, pad=20)
 
 # Colorbar
@@ -57,8 +59,5 @@ ax.view_init(elev=25, azim=45)
 outputFilename = "3d_clusters.png"
 plt.tight_layout()
 plt.savefig(outputFilename, dpi=300, bbox_inches='tight')
-
-# set this off by default as it gave problems. Just open the file after
-# plt.show()
 
 print(f"Done creating scatterplot. Saved to {outputFilename}")
