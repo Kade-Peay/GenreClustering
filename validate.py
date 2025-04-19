@@ -1,5 +1,9 @@
 import sys
 
+#
+# Author: Kade Peay
+#
+
 def calculate_difference_percentage(file1_lines, file2_lines):
     total_lines = max(len(file1_lines), len(file2_lines))
     if total_lines == 0:
