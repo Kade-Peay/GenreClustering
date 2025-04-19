@@ -20,7 +20,7 @@
 - 3 (note: No scaling study for GPUs, instead look at different block size)
 - 4 vs 5 (note: these will have to use from 2 to 4 nodes of any of the CHPC clusters)
 
-## 4. Usea  validation function to check that the result from parallel implementations is equal to the serial output implementation
+## 4. Use a  validation function to check that the result from parallel implementations is equal to the serial output implementation
 - Serial vs. Shared: The files are identical
 - Serial vs. GPU:
 - Serial vs. Distributed: The files are different by 7.68%
@@ -31,6 +31,7 @@ utils.cpp and utils.hpp
 
 ## 6. Visualization of the output
 This is done using the plotter.py script and outputs to a file named 3d_clusters.png.
+![Cluster vis](3d_clusters.png)
 
 ## 7. Clearly explain who was responsible for which task on the project 
 Kade: Serial and Parallel shared memory implementations, as well as the python script for visualization and validation.
