@@ -83,7 +83,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    int epochs = 100; // number of iterations
+    int epochs = 2; // number of iterations
     kMeansClustering(&points, epochs, k);
 
     // Write results to output file

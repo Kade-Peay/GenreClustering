@@ -72,7 +72,7 @@ std::vector<Point> readcsv(std::string filename)
             }
         }
     }
-    
+
     if (points.empty()) {
         throw std::runtime_error("No valid data points loaded from CSV");
     }

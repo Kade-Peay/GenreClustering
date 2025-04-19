@@ -15,65 +15,54 @@ void kMeansClustering(std::vector<Point> *points, int epochs, int k)
     srand(100);
 
     // Initialize centroids with random points
-    for (int i = 0; i < k; ++i)
-    {
+    for (int i = 0; i < k; ++i) {
         centroids.push_back(points->at(rand() % points->size()));
     }
 
-    for (int epoch = 0; epoch < epochs; ++epoch)
-    {
+    for (int epoch = 0; epoch < epochs; ++epoch) {
         // Parallel assignment of points to clusters
-        #pragma omp parallel for 
-        for (size_t i = 0; i < points->size(); ++i)
-        {
+        #pragma omp parallel for
+        for (size_t i = 0; i < points->size(); ++i) {
             Point &p = (*points)[i];
             p.minDist = DBL_MAX;
-
-            for (int clusterId = 0; clusterId < k; ++clusterId)
-            {
+            
+            for (int clusterId = 0; clusterId < k; ++clusterId) {
                 double dist = centroids[clusterId].distance(p);
-                if (dist < p.minDist)
-                {
+                if (dist < p.minDist) {
                     p.minDist = dist;
                     p.cluster = clusterId;
                 }
             }
         }
-    }
 
-    // Reduction variables for accumulation
-    // switch to arrays because of openMP
-    int nPoints[k] = {0};
-    double sumD[k] = {0.0};
-    double sumV[k] = {0.0};
-    double sumE[k] = {0.0};
+        // Reduction variables for accumulation
+        int nPoints[k] = {0};
+        double sumD[k] = {0.0};
+        double sumV[k] = {0.0};
+        double sumE[k] = {0.0};
 
-    // Parallel accumulation of points
-    #pragma omp parallel for reduction(+:nPoints, sumD, sumV, sumE)
-    for (size_t i = 0; i < points->size(); ++i)
-    {
-        const Point &p = (*points)[i];
-        int clusterId = p.cluster;
-        nPoints[clusterId] += 1;
-        sumD[clusterId] += p.danceability;
-        sumV[clusterId] += p.valence;
-        sumE[clusterId] += p.energy;
-    }
+        // Parallel accumulation of points
+        #pragma omp parallel for reduction(+:nPoints, sumD, sumV, sumE)
+        for (size_t i = 0; i < points->size(); ++i) {
+            Point &p = (*points)[i];
+            int clusterId = p.cluster;
+            nPoints[clusterId] += 1;
+            sumD[clusterId] += p.danceability;
+            sumV[clusterId] += p.valence;
+            sumE[clusterId] += p.energy;
+            p.minDist = DBL_MAX;  // Reset for next iteration
+        }
 
-    // compute the new centroids
-    // done serially still
-    for (int clusterId = 0; clusterId < k; ++clusterId)
-    {
-        if (nPoints[clusterId] != 0) 
-        {
-            centroids[clusterId].danceability = sumD[clusterId] / nPoints[clusterId];
-            centroids[clusterId].valence = sumV[clusterId] / nPoints[clusterId];
-            centroids[clusterId].energy = sumE[clusterId] / nPoints[clusterId];
+        // Update centroids
+        for (int clusterId = 0; clusterId < k; ++clusterId) {
+            if (nPoints[clusterId] != 0) {
+                centroids[clusterId].danceability = sumD[clusterId] / nPoints[clusterId];
+                centroids[clusterId].valence = sumV[clusterId] / nPoints[clusterId];
+                centroids[clusterId].energy = sumE[clusterId] / nPoints[clusterId];
+            }
         }
     }
-
 }
-
 int main(int argc, char *argv[])
 {
     // first check for proper command line args

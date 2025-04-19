@@ -31,26 +31,37 @@ int main(int argc, char *argv[])
         return 1;
     }
     
-    // get thread num from args
-    std::string inputFile = argv[1];
-    int k = std::stoi(argv[2]);
-    int threadsPerBlock = std::stoi(argv[3]);
+    std::string inputFile;
+    int k, threadsPerBlock;
     int epochs = 100; // number of iterations
 
     std::vector<Point> allPoints;
-    if (world_rank == 0)
+    std::cout << "Process " << world_rank << " started\n";
+    if (world_rank == 0){
+        std::cout << "Loading data" << std::endl;
+        inputFile = argv[1];
+        k = std::stoi(argv[2]);
+        threadsPerBlock = std::stoi(argv[3]);
         allPoints = readcsv(inputFile);
 
-    if (allPoints.empty())
-    {
-        std::cerr << "No data points loaded. Check your input file.\n";
-        return 1;
+        std::cout << "Arguments loaded\n";
+        
+        if (allPoints.empty())
+        {
+            std::cerr << "No data points loaded. Check your input file.\n";
+            MPI_Finalize();
+            return 1;
+        }
     }
-    
-    // Broadcast size to all
-    int totalSize = allPoints.size();
-    MPI_Bcast(&totalSize, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
+    std::cout << "Process " << world_rank << " about to broadcast\n";
+    // Broadcast variables to all
+    int totalSize = allPoints.size();
+    std::cout << "Total points: " << totalSize << "\n";
+    MPI_Bcast(&totalSize, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&k, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&threadsPerBlock, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    std::cout << "Finished broadcasting\n";
     // Split data evenly among processes
     int localSize = totalSize / world_size;
     std::vector<Point> localPoints(localSize);
