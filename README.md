@@ -10,7 +10,9 @@
 
 ## 2. Description of the approach used for each of the following implementations
 1. Serial
+    - This is the standard, single-threaded version of the k-means clustering that processes sequentially. This is the baseline C++ implementation using vectors to assign poitns to the clusters and update the centroids over the fixed 100 epochs.
 2. Parallel shared memory CPU
+    - This version parallelizes the k-means clustering algorithm using OpenMP to distribute the work across CPU cores. It has two parallel regions: Cluster aassignment via a nearest-neighbor search and the statistical reduction for centroid updates. It maintains thread safety using OpenMP's reduction operations while keeping the same base algorithm from the serial implementation. 
 3. Parallel CUDA GPU 
 4. Distributed Memory CPU
 5. Distributed memory GPU
