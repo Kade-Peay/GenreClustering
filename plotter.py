@@ -3,6 +3,10 @@ import pandas as pd
 from mpl_toolkits.mplot3d import Axes3D
 import sys
 
+#
+# Author: Kade Peay
+#
+
 # Get filename from arg
 try: 
     filename = sys.argv[1]
