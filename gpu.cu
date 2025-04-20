@@ -8,8 +8,9 @@
 #include <string>
 #include <vector>
 
-__global__ void AssignToCluster(Point* points, Point* centroids, int k) {
-    int idx = threadIdx.x;
+__global__ void AssignToCluster(Point* points, Point* centroids, int k, int numPoints) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx >= numPoints) return;
 
     Point p = points[idx];
     p.minDist = DBL_MAX;
@@ -30,24 +31,55 @@ __global__ void AssignToCluster(Point* points, Point* centroids, int k) {
     points[idx] = p;
 }
 
-extern "C" void Malloc(Point** points, int size){
-    cudaMalloc(points, size);
+extern "C" void Malloc(Point** points, size_t size){
+    cudaError_t err = cudaMalloc(points, size * sizeof(Point));
+    if (err != cudaSuccess) {
+        std::cerr << "cudaMalloc failed: " << cudaGetErrorString(err) << std::endl;
+        exit(1);
+    }
 }
 
-extern "C" void MemcpyHost(Point* devicePoints, Point* hostPoints, int size){
-    cudaMemcpy(devicePoints, hostPoints, size * sizeof(Point), cudaMemcpyHostToDevice);
+extern "C" void MemcpyHost(Point* devicePoints, Point* hostPoints, size_t size){
+    cudaError_t err = cudaMemcpy(devicePoints, hostPoints, size * sizeof(Point), cudaMemcpyHostToDevice);
+    if (err != cudaSuccess) {
+        std::cerr << "cudaMalloc failed: " << cudaGetErrorString(err) << std::endl;
+        exit(1);
+    }
 }
 
-extern "C" void MemcpyDevice(Point* devicePoints, Point* hostPoints, int size){
-    cudaMemcpy(hostPoints, devicePoints, size * sizeof(Point), cudaMemcpyDeviceToHost);
-
+extern "C" void MemcpyDevice(Point* devicePoints, Point* hostPoints, size_t size){
+    cudaError_t err = cudaMemcpy(hostPoints, devicePoints, size * sizeof(Point), cudaMemcpyDeviceToHost);
+    if (err != cudaSuccess) {
+        std::cerr << "cudaMalloc failed: " << cudaGetErrorString(err) << std::endl;
+        exit(1);
+    }
 }
 
 extern "C" void Free(Point* points){
-    cudaFree(points);
+    cudaError_t err = cudaFree(points);
+    if (err != cudaSuccess) {
+        std::cerr << "cudaMalloc failed: " << cudaGetErrorString(err) << std::endl;
+        exit(1);
+    }
 }
 
-extern "C" void AssignToCluster(int blocks, int threadsPerBlock, Point* points, Point* centroids, int k) {
-    AssignToCluster<<<blocks, threadsPerBlock>>>(points, centroids, k);
-    cudaDeviceSynchronize();
+extern "C" float AssignToCluster(int blocks, int threadsPerBlock, Point* points, Point* centroids, int k, int numPoints) {
+    cudaEvent_t start1, stop1;
+    cudaEventCreate(&start1);
+    cudaEventCreate(&stop1);
+
+    cudaEventRecord(start1);
+    AssignToCluster<<<blocks, threadsPerBlock>>>(points, centroids, k, numPoints);
+    cudaEventRecord(stop1);
+    cudaEventSynchronize(stop1);
+
+    float milliseconds = 0;
+    cudaEventElapsedTime(&milliseconds, start1, stop1);
+
+    cudaError_t err = cudaGetLastError();
+    if (err != cudaSuccess) {
+        std::cerr << "CUDA Kernel failed: " << cudaGetErrorString(err) << std::endl;
+        exit(1);
+    }
+    return milliseconds;
 }

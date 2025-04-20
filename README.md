@@ -1,11 +1,12 @@
 ## 1. Instructions for how to build and execute on CHPC
-- Start by running the Makefile which will create executables for all implementations.
 - Module load CUDA for the gpu implementation
+- Module load MPI for the distributed implementations
+- Start by running the Makefile which will create executables for all implementations.
 - Usage
     * Serial: ./serial <input_file> <number_of_clusters>
     * Shared: ./shared <input_file> <number_of_clusters> <thread_count>
     * Shared-GPU: ./shared-gpu <input_file> <number_of_clusters> <threads_per_block>
-    * Distributed CPU: ./distributed <input_file> <k> <thread_count> 
+    * Distributed CPU: ./distributed <input_file> <number_of_clusters> <thread_count> 
     * Distributed-GPU: ./distributed-gpu <input_file> <number_of_clusters> <threads_per_block>
 
 ## 2. Description of the approach used for each of the following implementations
@@ -19,7 +20,20 @@
 
 ## 3. Scaling study experiments where you compare implementations
 - 1 vs 2 
-- 3 (note: No scaling study for GPUs, instead look at different block size)
+- 3 
+
+| Threads per Block | Timing in Seconds | Cuda elapsed time in Milliseconds |
+|----------|----------|----------|
+| 4 | 51.6468 | 348.291 |
+| 8 | 51.4146 | 188.485 |
+| 16 | 51.2882 | 102.235 |
+| 32 | 51.2957 | 63.1103 |
+| 64 | 51.1998 | 66.5643 |
+| 128 | 51.3613 | 62.6774 |
+| 256 | 51.1931 | 62.1332 |
+| 512 | 51.517 | 73.3961 |
+| 1024 | 51.3535 | 63.9531 |
+
 - 4 vs 5 (note: these will have to use from 2 to 4 nodes of any of the CHPC clusters)
 
 ## 4. Use a  validation function to check that the result from parallel implementations is equal to the serial output implementation
@@ -29,7 +43,7 @@
 - Serial vs. Distributed-GPU:
 
 ## 5. reuse code across implementations
-utils.cpp and utils.hpp
+utils.cpp, utils.hpp, and cuda.cu
 
 ## 6. Visualization of the output
 This is done using the plotter.py script and outputs to a file named 3d_clusters.png.
