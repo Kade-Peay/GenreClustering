@@ -2,7 +2,10 @@
 #include <cfloat>
 #include <ctime>
 #include <fstream>
+#include <chrono>
 #include <iostream>
+#include <numeric>
+#include <iomanip>
 
 /*
     Author: Kade Peay
@@ -84,7 +87,19 @@ int main(int argc, char *argv[])
     }
 
     int epochs = 100; // number of iterations
-    kMeansClustering(&points, epochs, k);
+
+    // start timer
+    const auto start = std::chrono::high_resolution_clock::now();
+
+    // call clustering
+    kMeansClustering(&points, epochs, k); 
+        
+    // end timing
+    const auto end = std::chrono::high_resolution_clock::now();
+
+    // calculate time taken
+    const std::chrono::duration<double> timeTaken = end - start;
+    
 
     // Write results to output file
     std::ofstream myfile("serial_output.csv");
@@ -96,6 +111,11 @@ int main(int argc, char *argv[])
     }
     myfile.close();
 
+    // Report sucessful output
     std::cout << "Clustering complete. Results saved to serial_output.csv\n";
+
+    // Report the time calcualted earlier
+    std::cout << "Time taken: " << timeTaken.count() << " seconds." << std::endl;
+    
     return 0;
 }
