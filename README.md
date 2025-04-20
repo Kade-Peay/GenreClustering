@@ -53,9 +53,11 @@
 
 ## 4. Use a  validation function to check that the result from parallel implementations is equal to the serial output implementation
 - Serial vs. Shared: The files are identical
-- Serial vs. GPU:
-- Serial vs. Distributed: The files are different by 7.68%
-- Serial vs. Distributed-GPU:
+- Serial vs. GPU: The files are identical
+- Serial vs. Distributed: The files are identical
+- Serial vs. Distributed-GPU:The files are identical
+
+The validation is 100% correct for every implementation with a caveat that the number of points was divisible by the number of processors for the distributed implementations
 
 ## 5. reuse code across implementations
 utils.cpp, utils.hpp, and cuda.cu
