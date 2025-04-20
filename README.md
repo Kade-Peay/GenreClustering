@@ -20,6 +20,7 @@
 
 ## 3. Scaling study experiments where you compare implementations
 - 1 vs 2 
+
 | Threads | Runtime in Seconds | Speedup |
 |----------|----------|----------|
 | 1 (Serial) | 31.1041 | 1.0x |
