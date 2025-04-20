@@ -20,6 +20,19 @@
 
 ## 3. Scaling study experiments where you compare implementations
 - 1 vs 2 
+| Threads | Runtime in Seconds | Speedup |
+| 1 (Serial) | 31.1041 | 1.0x |
+| 2 | 7.45823 | 4.17x |
+| 4 | 3.88382 | 8.01x |
+| 8 | 4.17708 | 7.45x |
+| 16 | 5.08855 | 6.11x |
+| 32 | 9.34725 | 3.33x |
+| 64 | 5.71546 | 5.44x |
+| 128 | 5.82273 | 5.34x |
+| 256 | 5.85255 | 5.31x |
+| 512 | 6.36135 | 4.89x |
+| 1024 | 6.55951 | 4.74x |
+
 - 3 
 
 | Threads per Block | Timing in Seconds | Cuda elapsed time in Milliseconds |
