@@ -10,7 +10,9 @@
     Author: Rebecca Lamoreaux
 */
 
-void kMeansClustering(std::vector<Point> &localPoints, int epochs, int k, int world_rank, int world_size)
+// We need all points so we can creat the centroids correctly.
+// Only access allPoints if world_rank == 0
+void kMeansClustering(std::vector<Point> *localPoints, std::vector<Point> *allPoints, int epochs, int k, int world_rank)
 {
     //Set seed for reproducibility
     std::vector<Point> centroids;
@@ -18,62 +20,66 @@ void kMeansClustering(std::vector<Point> &localPoints, int epochs, int k, int wo
     // Initialize centroids randomly and broadcast them (By root)
     if (world_rank == 0){
         srand(100);
-
         for (int i = 0; i < k; ++i)
         {
-            centroids.push_back(localPoints[rand() % localPoints.size()]);
+            centroids.push_back(allPoints->at(rand() % allPoints->size()));
         }
-
+    }
+    else {
+        centroids.resize(k); // Allocate memory for broadcast on other ranks
     }
     MPI_Bcast(centroids.data(), k * sizeof(Point), MPI_BYTE, 0, MPI_COMM_WORLD);
 
     for (int epoch = 0; epoch < epochs; ++epoch)
     {
-        // Assign local points to nearest centroid
-        for (Point &p: localPoints)
-        {
+        // Parallel assignment of points to clusters
+        #pragma omp parallel for
+        for (size_t i = 0; i < localPoints->size(); ++i) {
+            Point &p = (*localPoints)[i];
             p.minDist = DBL_MAX;
-
-            for (int clusterId = 0; clusterId < k; ++clusterId)
-            {
+            
+            for (int clusterId = 0; clusterId < k; ++clusterId) {
                 double dist = centroids[clusterId].distance(p);
-                if (dist < p.minDist)
-                {
+                if (dist < p.minDist) {
                     p.minDist = dist;
                     p.cluster = clusterId;
                 }
             }
         }
-    
 
         // Set up local gathering of stats for all clusters
-        std::vector<int> local_nPoints(k, 0);
-        std::vector<double> local_sumD(k, 0.0), local_sumV(k, 0.0), local_sumE(k, 0.0);
+        int local_nPoints[k] = {0};
+        double local_sumD[k] = {0.0};
+        double local_sumV[k] = {0.0};
+        double local_sumE[k] = {0.0};
 
-        for (const Point &p : localPoints)
-        {
+        // Parallel accumulation of points
+        #pragma omp parallel for reduction(+:local_nPoints, local_sumD, local_sumV, local_sumE)
+        for (size_t i = 0; i < localPoints->size(); ++i) {
+            Point &p = (*localPoints)[i];
             int clusterId = p.cluster;
-            local_nPoints[clusterId]++;
+            local_nPoints[clusterId] += 1;
             local_sumD[clusterId] += p.danceability;
             local_sumV[clusterId] += p.valence;
             local_sumE[clusterId] += p.energy;
+            p.minDist = DBL_MAX;  // Reset for next iteration
         }
-
         // Redcue thread points into global sums
-        std::vector<int> global_nPoints(k);
-        std::vector<double> global_sumD(k), global_sumV(k), global_sumE(k);
+        int global_nPoints[k] = {0};
+        double global_sumD[k] = {0.0};
+        double global_sumV[k] = {0.0};
+        double global_sumE[k] = {0.0};
 
-        MPI_Allreduce(local_nPoints.data(), global_nPoints.data(), k, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-        MPI_Allreduce(local_sumD.data(), global_sumD.data(), k, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-        MPI_Allreduce(local_sumV.data(), global_sumV.data(), k, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-        MPI_Allreduce(local_sumE.data(), global_sumE.data(), k, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-
+        MPI_Allreduce(local_nPoints, global_nPoints, k, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(local_sumD, global_sumD, k, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(local_sumV, global_sumV, k, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(local_sumE, global_sumE, k, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
         // Update centroids and watch for convergence (ONLY ROOT)
         bool localConverged = true;
-        std::vector<Point> newCentroids(k);
 
         if (world_rank == 0){
+            std::vector<Point> newCentroids(k);
             for (int clusterId = 0; clusterId < k; ++clusterId)
             {
                 if (global_nPoints[clusterId] == 0) continue;
@@ -91,7 +97,7 @@ void kMeansClustering(std::vector<Point> &localPoints, int epochs, int k, int wo
         }
 
         // Broadcast updated centroids
-        MPI_Bcast(newCentroids.data(), k * sizeof(Point), MPI_BYTE, 0, MPI_COMM_WORLD);
+        MPI_Bcast(centroids.data(), k * sizeof(Point), MPI_BYTE, 0, MPI_COMM_WORLD);
 
         // Broadcast convergence flag
         int convergedInt = localConverged ? 1 : 0;
@@ -117,30 +123,36 @@ int main(int argc, char *argv[])
     // first check for proper command line args
     if (argc != 4) {
         if (world_rank == 0)
-            std::cerr << "Usage: " << argv[0] << " <input_file> <k> <thread_count>\n";
+            std::cerr << "Usage: " << argv[0] << " <input_file> <number_of_clusters> <thread_count>\n";
         MPI_Finalize();
         return 1;
     }
     
     // get thread num from args
-    std::string inputFile = argv[1];
-    int k = std::stoi(argv[2]);
-    int threads = std::stoi(argv[3]);
+    std::string inputFile;
+    int k, threads, totalSize;
     int epochs = 100; // number of iterations
 
     std::vector<Point> allPoints;
-    if (world_rank == 0)
+    if (world_rank == 0){
+        inputFile = argv[1];
+        k = std::stoi(argv[2]);
+        threads = std::stoi(argv[3]);
         allPoints = readcsv(inputFile);
-
-    if (allPoints.empty())
-    {
-        std::cerr << "No data points loaded. Check your input file.\n";
-        return 1;
+        totalSize = allPoints.size();
+        
+        if (allPoints.empty())
+        {
+            std::cerr << "No data points loaded. Check your input file.\n";
+            MPI_Finalize();
+            return 1;
+        }
     }
     
     // Broadcast size to all
-    int totalSize = allPoints.size();
     MPI_Bcast(&totalSize, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&k, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&threads, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
     // Split data evenly among processes
     int localSize = totalSize / world_size;
@@ -150,7 +162,7 @@ int main(int argc, char *argv[])
                 0, MPI_COMM_WORLD);
 
     omp_set_num_threads(threads);
-    kMeansClustering(localPoints, epochs, k, world_rank, world_size);
+    kMeansClustering(&localPoints, &allPoints, epochs, k, world_rank);
 
     // Gather all points at root
     MPI_Gather(localPoints.data(), localSize * sizeof(Point), MPI_BYTE,

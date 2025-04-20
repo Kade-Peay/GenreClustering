@@ -3,7 +3,8 @@
 .vscode
 *.o
 distributed
-gpu
+distributed-gpu
 serial
 shared
+shared-gpu
 tracks_features.csv

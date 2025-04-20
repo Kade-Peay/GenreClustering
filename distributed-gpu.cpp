@@ -9,10 +9,8 @@
 extern "C" void Malloc(Point** points, int size);
 extern "C" void MemcpyHost(Point* devicePoints, Point* hostPoints, int size);
 extern "C" void MemcpyDevice(Point* devicePoints, Point* hostPoints, int size);
-extern "C" void Synchronize();
 extern "C" void Free(Point* points);
-extern "C" void AssignToCluster(int blocks, int threadsPerBlock, Point* points, Point* centroids, int centroidId);
-extern "C" void ResetDistance(int blocks, int threadsPerBlock, Point* points);
+extern "C" void AssignToCluster(int blocks, int threadsPerBlock, Point* points, Point* centroids, int k);
 
 int main(int argc, char *argv[])
 {
@@ -31,25 +29,30 @@ int main(int argc, char *argv[])
         return 1;
     }
     
-    // get thread num from args
-    std::string inputFile = argv[1];
-    int k = std::stoi(argv[2]);
-    int threadsPerBlock = std::stoi(argv[3]);
+    std::string inputFile;
+    int k, threadsPerBlock, totalSize;
     int epochs = 100; // number of iterations
 
     std::vector<Point> allPoints;
-    if (world_rank == 0)
+    if (world_rank == 0){
+        inputFile = argv[1];
+        k = std::stoi(argv[2]);
+        threadsPerBlock = std::stoi(argv[3]);
         allPoints = readcsv(inputFile);
-
-    if (allPoints.empty())
-    {
-        std::cerr << "No data points loaded. Check your input file.\n";
-        return 1;
+        totalSize = allPoints.size();
+        
+        if (allPoints.empty())
+        {
+            std::cerr << "No data points loaded. Check your input file.\n";
+            MPI_Finalize();
+            return 1;
+        }
     }
-    
-    // Broadcast size to all
-    int totalSize = allPoints.size();
+
+    // Broadcast variables to all
     MPI_Bcast(&totalSize, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&k, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&threadsPerBlock, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
     // Split data evenly among processes
     int localSize = totalSize / world_size;
@@ -65,11 +68,15 @@ int main(int argc, char *argv[])
     if (world_rank == 0){
         srand(100);
 
+        // Only access allPoints on root
         for (int i = 0; i < k; ++i)
         {
-            centroids.push_back(localPoints[rand() % localPoints.size()]);
+            centroids.push_back(allPoints[rand() % allPoints.size()]);
         }
 
+    }
+    else {
+        centroids.resize(k); // Allocate memory for broadcast on other ranks
     }
     MPI_Bcast(centroids.data(), k * sizeof(Point), MPI_BYTE, 0, MPI_COMM_WORLD);
 
@@ -86,15 +93,13 @@ int main(int argc, char *argv[])
     int blocks = (k + threadsPerBlock - 1) / threadsPerBlock;
     for (int epoch = 0; epoch < epochs; ++epoch)
     {
-        for (size_t i = 0; i < centroids.size(); ++i)
-        {
-            AssignToCluster(blocks, threadsPerBlock, d_points, d_centroids, i);
-        }
-        Synchronize();
+        AssignToCluster(blocks, threadsPerBlock, d_points, d_centroids, k);
 
         // Set up local gathering of stats for all clusters
-        std::vector<int> local_nPoints(k, 0);
-        std::vector<double> local_sumD(k, 0.0), local_sumV(k, 0.0), local_sumE(k, 0.0);
+        int local_nPoints[k] = {0};
+        double local_sumD[k] = {0.0};
+        double local_sumV[k] = {0.0};
+        double local_sumE[k] = {0.0};
 
         MemcpyDevice(d_points, localPoints.data(), localPoints.size());
         for (auto &p : localPoints)
@@ -106,25 +111,23 @@ int main(int argc, char *argv[])
             local_sumE[clusterId] += p.energy;
         }
 
-        // reset distance
-        ResetDistance(blocks, threadsPerBlock, d_points);
-        Synchronize();
-
         // Reduce thread points into global sums
-        std::vector<int> global_nPoints(k);
-        std::vector<double> global_sumD(k), global_sumV(k), global_sumE(k);
+        int global_nPoints[k] = {0};
+        double global_sumD[k] = {0.0};
+        double global_sumV[k] = {0.0};
+        double global_sumE[k] = {0.0};
 
-        MPI_Allreduce(local_nPoints.data(), global_nPoints.data(), k, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-        MPI_Allreduce(local_sumD.data(), global_sumD.data(), k, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-        MPI_Allreduce(local_sumV.data(), global_sumV.data(), k, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-        MPI_Allreduce(local_sumE.data(), global_sumE.data(), k, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(local_nPoints, global_nPoints, k, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(local_sumD, global_sumD, k, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(local_sumV, global_sumV, k, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(local_sumE, global_sumE, k, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
 
         // Update centroids and watch for convergence (ONLY ROOT)
         bool localConverged = true;
-        std::vector<Point> newCentroids(k);
 
         if (world_rank == 0){
+            std::vector<Point> newCentroids(k);
             MemcpyDevice(d_centroids, centroids.data(), k);
             for (int clusterId = 0; clusterId < k; ++clusterId)
             {
@@ -143,7 +146,7 @@ int main(int argc, char *argv[])
         }
 
         // Broadcast updated centroids
-        MPI_Bcast(newCentroids.data(), k * sizeof(Point), MPI_BYTE, 0, MPI_COMM_WORLD);
+        MPI_Bcast(centroids.data(), k * sizeof(Point), MPI_BYTE, 0, MPI_COMM_WORLD);
         MemcpyHost(d_centroids, centroids.data(), k);
 
         // Broadcast convergence flag
