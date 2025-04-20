@@ -89,7 +89,7 @@ void kMeansClustering(std::vector<Point> *localPoints, std::vector<Point> *allPo
                 newCentroids[clusterId].energy       = global_sumE[clusterId] / global_nPoints[clusterId];
                 
                 double delta = centroids[clusterId].distance(newCentroids[clusterId]);
-                if (delta > 1e-4){
+                if (delta > convergenceDelta){
                     localConverged = false;
                 }
             }

@@ -1,19 +1,21 @@
 #include <mpi.h>
 #include "utils.hpp"
 #include <cfloat>
+#include <chrono>
 #include <ctime>
 #include <fstream>
 #include <iostream>
 #include <omp.h>
 
-extern "C" void Malloc(Point** points, int size);
-extern "C" void MemcpyHost(Point* devicePoints, Point* hostPoints, int size);
-extern "C" void MemcpyDevice(Point* devicePoints, Point* hostPoints, int size);
+extern "C" void Malloc(Point** points, size_t size);
+extern "C" void MemcpyHost(Point* devicePoints, Point* hostPoints, size_t size);
+extern "C" void MemcpyDevice(Point* devicePoints, Point* hostPoints, size_t size);
 extern "C" void Free(Point* points);
-extern "C" void AssignToCluster(int blocks, int threadsPerBlock, Point* points, Point* centroids, int k);
+extern "C" float AssignToCluster(int blocks, int threadsPerBlock, Point* points, Point* centroids, int k, int numPoints);
 
 int main(int argc, char *argv[])
 {
+    auto start = std::chrono::high_resolution_clock::now();
     // Set up MPI for Distribution stuff
     MPI_Init(&argc, &argv);
 
@@ -22,15 +24,15 @@ int main(int argc, char *argv[])
     MPI_Comm_size(MPI_COMM_WORLD, &world_size);
 
     // first check for proper command line args
-    if (argc != 4) {
+    if (argc != 5) {
         if (world_rank == 0)
-            std::cerr << "Usage: " << argv[0] << " <input_file> <number_of_clusters> <threads_per_block>\n";
+            std::cerr << "Usage: " << argv[0] << " <input_file> <number_of_clusters> <threads_per_block> <thread_count>\n";
         MPI_Finalize();
         return 1;
     }
     
     std::string inputFile;
-    int k, threadsPerBlock, totalSize;
+    int k, threadsPerBlock, totalSize, threads;
     int epochs = 100; // number of iterations
 
     std::vector<Point> allPoints;
@@ -38,6 +40,7 @@ int main(int argc, char *argv[])
         inputFile = argv[1];
         k = std::stoi(argv[2]);
         threadsPerBlock = std::stoi(argv[3]);
+        threads = std::stoi(argv[4]);
         allPoints = readcsv(inputFile);
         totalSize = allPoints.size();
         
@@ -53,6 +56,7 @@ int main(int argc, char *argv[])
     MPI_Bcast(&totalSize, 1, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(&k, 1, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(&threadsPerBlock, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&threads, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
     // Split data evenly among processes
     int localSize = totalSize / world_size;
@@ -61,6 +65,7 @@ int main(int argc, char *argv[])
                 localPoints.data(), localSize * sizeof(Point), MPI_BYTE,
                 0, MPI_COMM_WORLD);
 
+    omp_set_num_threads(threads);
     //Set seed for reproducibility
     std::vector<Point> centroids;
 
@@ -83,17 +88,18 @@ int main(int argc, char *argv[])
     // Allocate device memory
     Point* d_points;
     Point* d_centroids;
-    Malloc(&d_points, localPoints.size() * sizeof(Point));
-    Malloc(&d_centroids, k * sizeof(Point));
+    Malloc(&d_points, localPoints.size());
+    Malloc(&d_centroids, k);
 
     // Copy data to device
     MemcpyHost(d_points, localPoints.data(), localPoints.size());
     MemcpyHost(d_centroids, centroids.data(), k);
 
-    int blocks = (k + threadsPerBlock - 1) / threadsPerBlock;
+    int blocks = (localPoints.size() + threadsPerBlock - 1) / threadsPerBlock;
+
     for (int epoch = 0; epoch < epochs; ++epoch)
     {
-        AssignToCluster(blocks, threadsPerBlock, d_points, d_centroids, k);
+        AssignToCluster(blocks, threadsPerBlock, d_points, d_centroids, k, localPoints.size());
 
         // Set up local gathering of stats for all clusters
         int local_nPoints[k] = {0};
@@ -102,10 +108,12 @@ int main(int argc, char *argv[])
         double local_sumE[k] = {0.0};
 
         MemcpyDevice(d_points, localPoints.data(), localPoints.size());
-        for (auto &p : localPoints)
-        {
+        // Parallel accumulation of points
+        #pragma omp parallel for reduction(+:local_nPoints, local_sumD, local_sumV, local_sumE)
+        for (size_t i = 0; i < localPoints.size(); ++i) {
+            Point p = localPoints[i];
             int clusterId = p.cluster;
-            local_nPoints[clusterId]++;
+            local_nPoints[clusterId] += 1;
             local_sumD[clusterId] += p.danceability;
             local_sumV[clusterId] += p.valence;
             local_sumE[clusterId] += p.energy;
@@ -138,7 +146,7 @@ int main(int argc, char *argv[])
                 newCentroids[clusterId].energy       = global_sumE[clusterId] / global_nPoints[clusterId];
                 
                 double delta = centroids[clusterId].distance(newCentroids[clusterId]);
-                if (delta > 1e-4){
+                if (delta > convergenceDelta){
                     localConverged = false;
                 }
             }
@@ -177,6 +185,9 @@ int main(int argc, char *argv[])
             myfile << point.danceability << "," << point.valence << "," << point.energy << "," << point.cluster << "\n";
         myfile.close();
         std::cout << "Results saved to distributed-gpu_output.csv\n";
+        auto end = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> duration = end - start;
+        std::cout << "Time taken: " << duration.count() << " seconds" << std::endl;
     }
 
     MPI_Finalize();

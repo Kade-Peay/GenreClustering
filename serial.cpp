@@ -2,7 +2,10 @@
 #include <cfloat>
 #include <ctime>
 #include <fstream>
+#include <chrono>
 #include <iostream>
+#include <numeric>
+#include <iomanip>
 
 /*
     Author: Kade Peay
@@ -52,16 +55,27 @@ void kMeansClustering(std::vector<Point> *points, int epochs, int k)
             p.minDist = DBL_MAX; // reset distance
         }
 
-        // Compute new centroids
-        for (auto c = begin(centroids); c != end(centroids); ++c)
+        // Update centroids and watch for convergence
+        bool converged = true;
+        std::vector<Point> newCentroids(k);
+        for (int clusterId = 0; clusterId < k; ++clusterId)
         {
-            int clusterId = c - begin(centroids);
-            if (nPoints[clusterId] != 0)
-            {
-                c->danceability = sumD[clusterId] / nPoints[clusterId];
-                c->valence = sumV[clusterId] / nPoints[clusterId];
-                c->energy = sumE[clusterId] / nPoints[clusterId];
+            if (nPoints[clusterId] == 0) continue;
+
+            newCentroids[clusterId].danceability = sumD[clusterId] / nPoints[clusterId];
+            newCentroids[clusterId].valence      = sumV[clusterId] / nPoints[clusterId];
+            newCentroids[clusterId].energy       = sumE[clusterId] / nPoints[clusterId];
+            
+            double delta = centroids[clusterId].distance(newCentroids[clusterId]);
+            if (delta > convergenceDelta){
+                converged = false;
             }
+        }
+        centroids = newCentroids;
+
+        if (converged){
+            std::cout << "Converged at epoch " << epoch << std::endl;
+            break;
         }
     }
 }
@@ -84,7 +98,19 @@ int main(int argc, char *argv[])
     }
 
     int epochs = 100; // number of iterations
-    kMeansClustering(&points, epochs, k);
+
+    // start timer
+    const auto start = std::chrono::high_resolution_clock::now();
+
+    // call clustering
+    kMeansClustering(&points, epochs, k); 
+        
+    // end timing
+    const auto end = std::chrono::high_resolution_clock::now();
+
+    // calculate time taken
+    const std::chrono::duration<double> timeTaken = end - start;
+    
 
     // Write results to output file
     std::ofstream myfile("serial_output.csv");
@@ -96,6 +122,11 @@ int main(int argc, char *argv[])
     }
     myfile.close();
 
+    // Report sucessful output
     std::cout << "Clustering complete. Results saved to serial_output.csv\n";
+
+    // Report the time calcualted earlier
+    std::cout << "Time taken: " << timeTaken.count() << " seconds." << std::endl;
+    
     return 0;
 }

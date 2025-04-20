@@ -4,6 +4,7 @@
 #include <fstream>
 #include <iostream>
 #include <omp.h>
+#include <chrono>
 
 /*
     Author: Kade Peay
@@ -53,13 +54,26 @@ void kMeansClustering(std::vector<Point> *points, int epochs, int k)
             p.minDist = DBL_MAX;  // Reset for next iteration
         }
 
-        // Update centroids
+        // Update centroids and watch for convergence
+        bool converged = true;
+        std::vector<Point> newCentroids(k);
         for (int clusterId = 0; clusterId < k; ++clusterId) {
-            if (nPoints[clusterId] != 0) {
-                centroids[clusterId].danceability = sumD[clusterId] / nPoints[clusterId];
-                centroids[clusterId].valence = sumV[clusterId] / nPoints[clusterId];
-                centroids[clusterId].energy = sumE[clusterId] / nPoints[clusterId];
+            if (nPoints[clusterId] == 0) continue;
+
+            newCentroids[clusterId].danceability = sumD[clusterId] / nPoints[clusterId];
+            newCentroids[clusterId].valence      = sumV[clusterId] / nPoints[clusterId];
+            newCentroids[clusterId].energy       = sumE[clusterId] / nPoints[clusterId];
+            
+            double delta = centroids[clusterId].distance(newCentroids[clusterId]);
+            if (delta > convergenceDelta){
+                converged = false;
             }
+        }
+        centroids = newCentroids;
+
+        if (converged){
+            std::cout << "Converged at epoch " << epoch << std::endl;
+            break;
         }
     }
 }
@@ -87,7 +101,17 @@ int main(int argc, char *argv[])
     // set number of threads
     omp_set_num_threads(threads);
 
+    // start timer
+    const auto start = std::chrono::high_resolution_clock::now();
+
+    // run clustering
     kMeansClustering(&points, epochs, k);
+
+    // end timer
+    const auto end = std::chrono::high_resolution_clock::now();
+
+    // calculate time taken
+    const std::chrono::duration<double> timeTaken = end - start;
 
     // Write results to output file
     std::ofstream myfile("shared_output.csv");
@@ -99,6 +123,10 @@ int main(int argc, char *argv[])
     }
     myfile.close();
 
+    // Report the file being written 
     std::cout << "Clustering complete. Results saved to shared_output.csv\n";
+
+    // Report the time taken calculated earlier
+    std::cout << "Time Taken: " << timeTaken.count() << " seconds" << std::endl;
     return 0;
 }

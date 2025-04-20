@@ -7,7 +7,7 @@
     * Shared: ./shared <input_file> <number_of_clusters> <thread_count>
     * Shared-GPU: ./shared-gpu <input_file> <number_of_clusters> <threads_per_block>
     * Distributed CPU: ./distributed <input_file> <number_of_clusters> <thread_count> 
-    * Distributed-GPU: ./distributed-gpu <input_file> <number_of_clusters> <threads_per_block>
+    * Distributed-GPU: ./distributed-gpu <input_file> <number_of_clusters> <threads_per_block> <thread_count>
 
 ## 2. Description of the approach used for each of the following implementations
 1. Serial
