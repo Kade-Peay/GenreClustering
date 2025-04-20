@@ -15,4 +15,6 @@ struct Point {
     double distance(Point p);
 };
 
+constexpr double convergenceDelta = 1e-10;
+
 std::vector<Point> readcsv(std::string filename);

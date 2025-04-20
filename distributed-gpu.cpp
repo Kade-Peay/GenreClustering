@@ -109,7 +109,7 @@ int main(int argc, char *argv[])
 
         MemcpyDevice(d_points, localPoints.data(), localPoints.size());
         // Parallel accumulation of points
-        // #pragma omp parallel for reduction(+:local_nPoints, local_sumD, local_sumV, local_sumE)
+        #pragma omp parallel for reduction(+:local_nPoints, local_sumD, local_sumV, local_sumE)
         for (size_t i = 0; i < localPoints.size(); ++i) {
             Point p = localPoints[i];
             int clusterId = p.cluster;
@@ -146,7 +146,7 @@ int main(int argc, char *argv[])
                 newCentroids[clusterId].energy       = global_sumE[clusterId] / global_nPoints[clusterId];
                 
                 double delta = centroids[clusterId].distance(newCentroids[clusterId]);
-                if (delta > 1e-4){
+                if (delta > convergenceDelta){
                     localConverged = false;
                 }
             }

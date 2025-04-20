@@ -55,16 +55,27 @@ void kMeansClustering(std::vector<Point> *points, int epochs, int k)
             p.minDist = DBL_MAX; // reset distance
         }
 
-        // Compute new centroids
-        for (auto c = begin(centroids); c != end(centroids); ++c)
+        // Update centroids and watch for convergence
+        bool converged = true;
+        std::vector<Point> newCentroids(k);
+        for (int clusterId = 0; clusterId < k; ++clusterId)
         {
-            int clusterId = c - begin(centroids);
-            if (nPoints[clusterId] != 0)
-            {
-                c->danceability = sumD[clusterId] / nPoints[clusterId];
-                c->valence = sumV[clusterId] / nPoints[clusterId];
-                c->energy = sumE[clusterId] / nPoints[clusterId];
+            if (nPoints[clusterId] == 0) continue;
+
+            newCentroids[clusterId].danceability = sumD[clusterId] / nPoints[clusterId];
+            newCentroids[clusterId].valence      = sumV[clusterId] / nPoints[clusterId];
+            newCentroids[clusterId].energy       = sumE[clusterId] / nPoints[clusterId];
+            
+            double delta = centroids[clusterId].distance(newCentroids[clusterId]);
+            if (delta > convergenceDelta){
+                converged = false;
             }
+        }
+        centroids = newCentroids;
+
+        if (converged){
+            std::cout << "Converged at epoch " << epoch << std::endl;
+            break;
         }
     }
 }

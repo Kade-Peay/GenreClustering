@@ -77,12 +77,26 @@ int main(int argc, char *argv[])
 
         // Compute new centroids
         MemcpyDevice(d_centroids, centroids.data(), k);
-        for (int clusterId = 0; clusterId < k; ++clusterId) {
-            if (nPoints[clusterId] != 0) {
-                centroids[clusterId].danceability = sumD[clusterId] / nPoints[clusterId];
-                centroids[clusterId].valence = sumV[clusterId] / nPoints[clusterId];
-                centroids[clusterId].energy = sumE[clusterId] / nPoints[clusterId];
+        bool converged = true;
+        std::vector<Point> newCentroids(k);
+        for (int clusterId = 0; clusterId < k; ++clusterId)
+        {
+            if (nPoints[clusterId] == 0) continue;
+
+            newCentroids[clusterId].danceability = sumD[clusterId] / nPoints[clusterId];
+            newCentroids[clusterId].valence      = sumV[clusterId] / nPoints[clusterId];
+            newCentroids[clusterId].energy       = sumE[clusterId] / nPoints[clusterId];
+            
+            double delta = centroids[clusterId].distance(newCentroids[clusterId]);
+            if (delta > convergenceDelta){
+                converged = false;
             }
+        }
+        centroids = newCentroids;
+
+        if (converged){
+            std::cout << "Converged at epoch " << epoch << std::endl;
+            break;
         }
         MemcpyHost(d_centroids, centroids.data(), k);
     }
