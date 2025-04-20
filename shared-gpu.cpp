@@ -6,11 +6,11 @@
 #include <iostream>
 #include <omp.h>
 
-extern "C" void Malloc(Point** points, int size);
-extern "C" void MemcpyHost(Point* devicePoints, Point* hostPoints, int size);
-extern "C" void MemcpyDevice(Point* devicePoints, Point* hostPoints, int size);
+extern "C" void Malloc(Point** points, size_t size);
+extern "C" void MemcpyHost(Point* devicePoints, Point* hostPoints, size_t size);
+extern "C" void MemcpyDevice(Point* devicePoints, Point* hostPoints, size_t size);
 extern "C" void Free(Point* points);
-extern "C" float AssignToCluster(int blocks, int threadsPerBlock, Point* points, Point* centroids, int kint, int numPoints);
+extern "C" float AssignToCluster(int blocks, int threadsPerBlock, Point* points, Point* centroids, int k, int numPoints);
 
 int main(int argc, char *argv[])
 {
