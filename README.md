@@ -13,6 +13,7 @@
 - 1 vs 2 
 - 3 (note: No scaling study for GPUs, instead look at different block size)
 - 4 vs 5 (note: these will have to use from 2 to 4 nodes of any of the CHPC clusters)
+- - 
 | Number of Clusters (1064 threads) | Timing in Seconds CPU| Timing in Seconds GPU |
 |----------|----------|----------|
 | 2 | 36.7596 | 37.7818   |
