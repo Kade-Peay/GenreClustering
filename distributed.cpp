@@ -5,6 +5,7 @@
 #include <fstream>
 #include <iostream>
 #include <omp.h>
+#include <chrono>
 
 /*
     Author: Rebecca Lamoreaux
@@ -76,7 +77,11 @@ void kMeansClustering(std::vector<Point> &localPoints, int epochs, int k, int wo
         if (world_rank == 0){
             for (int clusterId = 0; clusterId < k; ++clusterId)
             {
-                if (global_nPoints[clusterId] == 0) continue;
+                if (global_nPoints[clusterId] == 0) {
+                    newCentroids[clusterId] = centroids[clusterId]; //Catches unnamed 
+                    
+                    continue;
+                }
 
                 newCentroids[clusterId].danceability = global_sumD[clusterId] / global_nPoints[clusterId];
                 newCentroids[clusterId].valence      = global_sumV[clusterId] / global_nPoints[clusterId];
@@ -107,6 +112,9 @@ void kMeansClustering(std::vector<Point> &localPoints, int epochs, int k, int wo
 
 int main(int argc, char *argv[])
 {
+    // start timer
+    const auto start = std::chrono::high_resolution_clock::now();
+
     // Set up MPI for Distribution stuff
     MPI_Init(&argc, &argv);
 
@@ -142,6 +150,9 @@ int main(int argc, char *argv[])
     int totalSize = allPoints.size();
     MPI_Bcast(&totalSize, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
+    // set number of threads
+    omp_set_num_threads(threads);
+
     // Split data evenly among processes
     int localSize = totalSize / world_size;
     std::vector<Point> localPoints(localSize);
@@ -157,14 +168,17 @@ int main(int argc, char *argv[])
                allPoints.data(), localSize * sizeof(Point), MPI_BYTE,
                0, MPI_COMM_WORLD);
 
-    // Write results to output file
+    // Write results to output file and end and calculator timer for time
     if (world_rank == 0) {
+        auto end = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> duration = end - start;
         std::ofstream myfile("distributed_output.csv");
         myfile << "danceability,valence,energy,cluster\n";
         for (const auto &point : allPoints)
             myfile << point.danceability << "," << point.valence << "," << point.energy << "," << point.cluster << "\n";
         myfile.close();
         std::cout << "Results saved to distributed_output.csv\n";
+        std::cout << "Time taken: " << duration.count() << " seconds" << std::endl;
     }
 
     MPI_Finalize();
