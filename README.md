@@ -13,13 +13,28 @@
 - 1 vs 2 
 - 3 (note: No scaling study for GPUs, instead look at different block size)
 - 4 vs 5 (note: these will have to use from 2 to 4 nodes of any of the CHPC clusters)
-- - 
 | Number of Clusters (1064 threads) | Timing in Seconds CPU| Timing in Seconds GPU |
 |----------|----------|----------|
 | 2 | 36.7596 | 37.7818   |
 | 4 | 43.2032 | 41.4922 |
 | 8 | 113.039   | 103.287 |
 | 16 | 391.539 | 354.859  |
+<<<<<<< Updated upstream
+=======
+
+- 
+| Threads (per block for gpu, total in cpu)| Timing in Seconds CPU| Timing in Milliseconds GPU|
+|----------|----------|----------|
+| 4 | 35.5861 | 38.2805 |
+| 8 | 36.0909 | 37.9196 |
+| 16 | 36.4038 | 38.2282 |
+| 32 | 46.2721 | 38.1518 |
+| 64 | 83.7466 | 38.2738 |
+| 128 | 36.6428  | 38.6429 |
+| 256 | 36.2209 | 37.7776 |
+| 512 | 36.4113 | 38.2375 |
+| 1024 | 36.6035 | 37.8799 |
+>>>>>>> Stashed changes
 
 - 
 | Threads (per block for gpu, total in cpu)| Timing in Seconds CPU| Timing in Milliseconds GPU|
@@ -44,10 +59,13 @@ Refer to the 3d_clusters.png
 
 ## 7. Clearly explain who was responsible for which task on the project 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 Kade: Serial and Parallel shared memory implementations, as well as the python script for visualization. 
 Rett: GPU implementation, as well as the util files and Makefile.
 
 =======
+=======
+>>>>>>> Stashed changes
 Kade: Serial and Parallel shared memory implementations, as well as the python script for visualization. \
 Rett: GPU implementations, as well as the util files and Makefile.\
 Rebecca: Distributed implementation.

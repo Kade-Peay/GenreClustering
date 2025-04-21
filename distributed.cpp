@@ -153,6 +153,9 @@ int main(int argc, char *argv[])
     // set number of threads
     omp_set_num_threads(threads);
 
+    // set number of threads
+    omp_set_num_threads(threads);
+
     // Split data evenly among processes
     int localSize = totalSize / world_size;
     std::vector<Point> localPoints(localSize);
