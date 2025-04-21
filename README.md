@@ -67,8 +67,10 @@ This is done using the plotter.py script and outputs to a file named 3d_clusters
 ![Cluster vis](3d_clusters.png)
 
 ## 7. Clearly explain who was responsible for which task on the project 
-Kade: Serial and Parallel shared memory implementations, as well as the python script for visualization. 
+Kade: Serial and Parallel shared memory implementations, as well as the python scripts for visualization and validation. 
+
 Rett: GPU implementations, as well as the util files and Makefile.
+
 Rebecca: Distributed implementation.
 
 ## References
