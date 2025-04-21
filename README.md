@@ -17,7 +17,7 @@
 3. Shared Memory CUDA GPU
     - This version parallelises the algorithm by using CUDA to offload the computation of assigning points to clusters to the GPU. Accumulating points for the computation of new centroids is a scenario to use reduction. But for the purpose of only using GPU it was only implemented in the Distributed Memory GPU option where we combined all techniques.
 4. Distributed Memory CPU
-    - This verision uses MPI and OpenMP to implement a distributed-memory parallelism across the nodes with shared-memory within the nodes. Rank 0 handles I/O and broadcasts the initial centroids while work gets distributed with MPI_Scatter.
+    - This version distrbutes the k-means clustering algorithm across multiple process using MPI. Utilizing MPI_Scatter to evenly split the clusters among the processes available. The results are then aggregated globally using MPI_Allreduce, and centroids are updated and broadcasted only by the root process to avoid dangerous situations. And then the results are gathered using MPI_Gather also by the root process. This version maintains the core k-means logic while enabling scalability across multiple nodes in a distributed system.
 5. Distributed Memory GPU
     - This method uses MPI for distributed-memory across nodes, OpenMP for shared-memory threading within the nodes, and GPU acceleration for the computationally intensive operations. Rank 0 process readds and distributes data evenly via MPI_Scatter, while all the processes use MPI_Allreduce to synchronize cluster statistics. The GPU kernels handle the parallel distance calculations during the cluster assignment, OpenMP accelerates the local reductions.
 
