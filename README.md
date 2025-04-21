@@ -14,8 +14,8 @@
     - This is the standard, single-threaded version of the k-means clustering that processes sequentially. This is the baseline C++ implementation using vectors to assign poitns to the clusters and update the centroids over the fixed 100 epochs.
 2. Parallel Shared Memory CPU
     - This version parallelizes the k-means clustering algorithm using OpenMP to distribute the work across CPU cores. It has two parallel regions: Cluster aassignment via a nearest-neighbor search and the statistical reduction for centroid updates. It maintains thread safety using OpenMP's reduction operations while keeping the same base algorithm from the serial implementation. 
-3. Parallel CUDA GPU
-    - This version parallelises the algorithm by using CUDA to offload the computation to the GPU.
+3. Shared Memory CUDA GPU
+    - This version parallelises the algorithm by using CUDA to offload the computation of assigning points to clusters to the GPU. Accumulating points for the computation of new centroids is a scenario to use reduction. But for the purpose of only using GPU it was only implemented in the Distributed Memory GPU option where we combined all techniques.
 4. Distributed Memory CPU
     - This verision uses MPI and OpenMP to implement a distributed-memory parallelism across the nodes with shared-memory within the nodes. Rank 0 handles I/O and broadcasts the initial centroids while work gets distributed with MPI_Scatter.
 5. Distributed Memory GPU
