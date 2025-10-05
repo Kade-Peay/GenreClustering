@@ -1,3 +1,7 @@
+## Introduction
+Takes a dataset of 1.2 Million Spotify songs and uses the K-Means Clustering algorithm to sort by genre. There are multiple implementations: Serial, Shared Memory, Shared GPU memory, Distributed CPU, and Distribute GPU. As well, there are a few Python helper files 'validate.py' and 'plotter.py'. Validate guarantees consistent results between methods, and plotter generates an image.
+
+
 ## 1. Instructions for how to build and execute on CHPC
 - Module load CUDA for the gpu implementation
 - Module load MPI for the distributed implementations
